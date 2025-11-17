@@ -1,15 +1,17 @@
-mod memory;
-mod registers;
 mod devices;
+mod memory;
 pub mod opcodes;
+mod processor;
+mod registers;
 
-use memory::Memory;
-use registers::Registers;
 use devices::device::Device;
-use devices::input_device::InputDevice;
-use devices::output_device::OutputDevice;
 use devices::err_device::ErrDevice;
 use devices::file_device::FileDevice;
+use devices::input_device::InputDevice;
+use devices::output_device::OutputDevice;
+use memory::Memory;
+use processor::Processor;
+use registers::Registers;
 
 const MAX_DEVICES: usize = 256;
 
@@ -17,16 +19,18 @@ pub struct Machine {
     pub registers: Registers,
     pub memory: Memory,
     /// accessable from get_device and set_device
-    devices: Vec<Box<dyn Device>>
+    devices: Vec<Box<dyn Device>>,
+    processor: Processor,
 }
 
 impl Machine {
     #[rustfmt::skip]
-    pub fn new() -> Self { 
+    pub fn new() -> Self {
         Self {
-            registers: Registers::new(), 
+            registers: Registers::new(),
             memory: Memory::new(),
             devices: Machine::device_init(),
+            processor: Processor::new()
         }
     }
 
@@ -41,9 +45,7 @@ impl Machine {
         }
         vec
     }
-    pub fn get_device(&mut self, index: usize) -> &mut Box<dyn Device> {
-        &mut self.devices[index]
-    }
+    pub fn get_device(&mut self, index: usize) -> &mut Box<dyn Device> { &mut self.devices[index] }
     pub fn set_device(&mut self, index: usize, device: Box<dyn Device>) -> () {
         self.devices[index] = device;
     }
