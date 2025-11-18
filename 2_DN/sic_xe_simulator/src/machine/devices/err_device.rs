@@ -6,7 +6,7 @@ pub struct ErrDevice {}
 impl Device for ErrDevice {
     fn test(&self) -> bool { true }
 
-    fn read(&mut self) -> i8 { 0 }
+    fn read(&mut self) -> u8 { 0 }
 
-    fn write(&mut self, val: i8) -> () { let _ = io::stderr().write_all(&[val as u8]).unwrap(); }
+    fn write(&mut self, val: u8) -> () { let _ = io::stderr().write_all(&[val]).unwrap(); }
 }

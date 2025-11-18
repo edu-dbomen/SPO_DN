@@ -1,7 +1,6 @@
 mod devices;
 mod memory;
 pub mod opcodes;
-mod processor;
 mod registers;
 
 use devices::device::Device;
@@ -10,7 +9,6 @@ use devices::file_device::FileDevice;
 use devices::input_device::InputDevice;
 use devices::output_device::OutputDevice;
 use memory::Memory;
-use processor::Processor;
 use registers::Registers;
 
 const MAX_DEVICES: usize = 256;
@@ -18,9 +16,8 @@ const MAX_DEVICES: usize = 256;
 pub struct Machine {
     pub registers: Registers,
     pub memory: Memory,
-    /// accessable from get_device and set_device
+    /// accessable with get_device and set_device
     devices: Vec<Box<dyn Device>>,
-    processor: Processor,
 }
 
 impl Machine {
@@ -30,7 +27,6 @@ impl Machine {
             registers: Registers::new(),
             memory: Memory::new(),
             devices: Machine::device_init(),
-            processor: Processor::new()
         }
     }
 

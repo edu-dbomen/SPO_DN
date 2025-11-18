@@ -86,3 +86,84 @@ pub enum Opcode {
     Clear = 0xB4,
     Tixr = 0xB8,
 }
+
+impl Opcode {
+    pub fn from_byte(b: u8) -> Option<Self> {
+        use Opcode::*;
+        Some(match b {
+            0x00 => Lda,
+            0x04 => Ldx,
+            0x08 => Ldl,
+            0x0C => Sta,
+            0x10 => Stx,
+            0x14 => Stl,
+
+            0x18 => Add,
+            0x1C => Sub,
+            0x20 => Mul,
+            0x24 => Div,
+            0x28 => Comp,
+            0x2C => Tix,
+
+            0x30 => Jeq,
+            0x34 => Jgt,
+            0x38 => Jlt,
+            0x3C => J,
+
+            0x40 => And,
+            0x44 => Or,
+
+            0x48 => Jsub,
+            0x4C => Rsub,
+
+            0x50 => Ldch,
+            0x54 => Stch,
+
+            0x58 => Addf,
+            0x5C => Subf,
+            0x60 => Mulf,
+            0x64 => Divf,
+            0x88 => Compf,
+
+            0x68 => Ldb,
+            0x6C => Lds,
+            0x70 => Ldf,
+            0x74 => Ldt,
+            0x78 => Stb,
+            0x7C => Sts,
+            0x80 => Stf,
+            0x84 => Stt,
+
+            0xD0 => Lps,
+            0xD4 => Sti,
+            0xE8 => Stsw,
+
+            0xD8 => Rd,
+            0xDC => Wd,
+            0xE0 => Td,
+
+            0xEC => Ssk,
+
+            0xC0 => Float,
+            0xC4 => Fix,
+            0xC8 => Norm,
+            0xF0 => Sio,
+            0xF4 => Hio,
+            0xF8 => Tio,
+
+            0x90 => Addr,
+            0x94 => Subr,
+            0x98 => Mulr,
+            0x9C => Divr,
+            0xA0 => Compr,
+            0xA4 => Shiftl,
+            0xA8 => Shiftr,
+            0xAC => Rmo,
+            0xB0 => Svc,
+            0xB4 => Clear,
+            0xB8 => Tixr,
+
+            _ => return None,
+        })
+    }
+}

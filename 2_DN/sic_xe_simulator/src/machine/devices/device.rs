@@ -1,5 +1,5 @@
-pub trait Device {
+pub trait Device: Send {
     fn test(&self) -> bool;
-    fn read(&mut self) -> i8;
-    fn write(&mut self, val: i8) -> ();
+    fn read(&mut self) -> u8;
+    fn write(&mut self, val: u8) -> ();
 }

@@ -30,14 +30,14 @@ impl FileDevice {
 impl Device for FileDevice {
     fn test(&self) -> bool { true }
 
-    fn read(&mut self) -> i8 {
+    fn read(&mut self) -> u8 {
         let mut buf = [0u8, 1];
 
         let _ = self.open_file().read_exact(&mut buf).expect("File reading error");
-        buf[0] as i8
+        buf[0]
     }
 
-    fn write(&mut self, val: i8) -> () {
-        let _ = self.open_file().write_all(&mut [val as u8]).expect("File writing error");
+    fn write(&mut self, val: u8) -> () {
+        let _ = self.open_file().write_all(&mut [val]).expect("File writing error");
     }
 }
