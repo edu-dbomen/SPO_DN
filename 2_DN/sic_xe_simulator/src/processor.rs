@@ -62,7 +62,7 @@ impl Processor {
     /// \   false -> not F1
     fn exec_f1(&self, opcode: &Opcode) -> bool {
         match opcode {
-            Opcode::Float => 1 + 1, //todo!("FLOAT"),
+            Opcode::Float => self.machine.registers.set_f(
             Opcode::Fix => todo!("FIX"),
             Opcode::Norm => todo!("NORM"),
             Opcode::Sio => todo!("SIO"),

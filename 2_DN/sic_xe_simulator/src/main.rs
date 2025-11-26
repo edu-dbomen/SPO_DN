@@ -1,11 +1,13 @@
 mod machine;
 mod processor;
+mod sic_xe;
 
 use machine::Machine;
 use processor::Processor;
 
 fn main() {
-    //test_machine();
+    test_machine();
+    test_processor();
 }
 
 fn test_processor() {
