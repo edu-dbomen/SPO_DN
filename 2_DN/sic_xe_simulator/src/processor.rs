@@ -3,7 +3,10 @@ extern crate timer;
 
 use std::sync::{Arc, Mutex};
 
-use crate::machine::{opcodes::Opcode, Machine};
+use crate::{
+    machine::{opcodes::Opcode, Machine},
+    sic_xe::{get_FormatSicF3F4Bits, get_r1_r2},
+};
 
 const MAX_HZ: i64 = 1_000_000_000;
 
@@ -40,11 +43,12 @@ impl Processor {
         }
 
         let operand = self.fetch();
-        if self.exec_f2(&opcode, operand) {
+        if self.exec_f2(&opcode, &operand) {
             return;
         }
 
-        if !self.exec_sic_f3_f4(&opcode, operand) {
+        let third_byte = self.fetch();
+        if !self.exec_sic_f3_f4(&opcode, &byte, &operand, &third_byte) {
             panic!("??? exec failed. Looks like I forgot to add a opcode to arms!?");
         }
     }
@@ -60,9 +64,11 @@ impl Processor {
     /// return:
     /// \   true -> executed F1
     /// \   false -> not F1
-    fn exec_f1(&self, opcode: &Opcode) -> bool {
+    fn exec_f1(&mut self, opcode: &Opcode) -> bool {
         match opcode {
-            Opcode::Float => self.machine.registers.set_f(
+            Opcode::Float => {
+                self.machine.registers.set_f(self.machine.registers.get_a().try_into().unwrap())
+            }
             Opcode::Fix => todo!("FIX"),
             Opcode::Norm => todo!("NORM"),
             Opcode::Sio => todo!("SIO"),
@@ -78,11 +84,11 @@ impl Processor {
     /// return:
     /// \   true -> executed F2
     /// \   false -> not F2
-    fn exec_f2(&self, opcode: &Opcode, operand: u8) -> bool {
-        // TODO: razdeli operand
+    fn exec_f2(&self, opcode: &Opcode, operand: &u8) -> bool {
+        let (r1, r2) = get_r1_r2(&operand);
 
         match opcode {
-            Opcode::Addr => 1 + 1, //todo!("ADDR"),
+            Opcode::Addr => todo!("ADDR"),
             Opcode::Subr => todo!("SUBR"),
             Opcode::Mulr => todo!("MULR"),
             Opcode::Divr => todo!("DIVR"),
@@ -109,8 +115,14 @@ impl Processor {
     /// return:
     /// \   true -> executed F3
     /// \   false -> not F3
-    fn exec_sic_f3_f4(&self, opcode: &Opcode, ni: u8) -> bool {
-        // TODO:
+    fn exec_sic_f3_f4(
+        &self,
+        opcode: &Opcode,
+        first_byte: &u8,
+        second_byte: &u8,
+        third_byte: &u8,
+    ) -> bool {
+        let bits = get_FormatSicF3F4Bits(&first_byte, &second_byte);
 
         match opcode {
             // ***** immediate addressing not possible *****
