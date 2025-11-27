@@ -67,7 +67,7 @@ impl Processor {
     fn exec_f1(&mut self, opcode: &Opcode) -> bool {
         match opcode {
             Opcode::Float => {
-                self.machine.registers.set_f(self.machine.registers.get_a().try_into().unwrap())
+                self.machine.registers.set_f(self.machine.registers.get_a().try_into().unwrap());
             }
             Opcode::Fix => todo!("FIX"),
             Opcode::Norm => todo!("NORM"),
@@ -84,20 +84,37 @@ impl Processor {
     /// return:
     /// \   true -> executed F2
     /// \   false -> not F2
-    fn exec_f2(&self, opcode: &Opcode, operand: &u8) -> bool {
+    fn exec_f2(&mut self, opcode: &Opcode, operand: &u8) -> bool {
         let (r1, r2) = get_r1_r2(&operand);
+        let r1_val = self.machine.registers.get_reg(r1.try_into().unwrap());
+        let r2_val = self.machine.registers.get_reg(r2.try_into().unwrap());
 
         match opcode {
-            Opcode::Addr => todo!("ADDR"),
-            Opcode::Subr => todo!("SUBR"),
-            Opcode::Mulr => todo!("MULR"),
-            Opcode::Divr => todo!("DIVR"),
-            Opcode::Compr => todo!("COMPR"),
-            Opcode::Shiftl => todo!("SHIFTL"),
-            Opcode::Shiftr => todo!("SHIFTR"),
-            Opcode::Rmo => todo!("RMO"),
-            Opcode::Clear => todo!("CLEAR"),
-            Opcode::Tixr => todo!("TIXR"),
+            Opcode::Addr => self.machine.registers.set_reg(r2.try_into().unwrap(), r2_val + r1_val),
+            Opcode::Subr => self.machine.registers.set_reg(r2.try_into().unwrap(), r2_val - r1_val),
+            Opcode::Mulr => self.machine.registers.set_reg(r2.try_into().unwrap(), r2_val * r1_val),
+            Opcode::Divr => self.machine.registers.set_reg(r2.try_into().unwrap(), r2_val / r1_val),
+            Opcode::Compr => self.machine.registers.set_sw(match r1_val.cmp(&r2_val) {
+                std::cmp::Ordering::Less => -1,
+                std::cmp::Ordering::Equal => 0,
+                std::cmp::Ordering::Greater => 1,
+            }),
+            Opcode::Shiftl => {
+                self.machine.registers.set_reg(r1.try_into().unwrap(), r1_val << r2_val);
+            }
+            Opcode::Shiftr => {
+                self.machine.registers.set_reg(r1.try_into().unwrap(), r1_val >> r2_val);
+            }
+            Opcode::Rmo => self.machine.registers.set_reg(r2.try_into().unwrap(), r1_val),
+            Opcode::Clear => self.machine.registers.set_reg(r1.try_into().unwrap(), 0),
+            Opcode::Tixr => {
+                self.machine.registers.set_x(self.machine.registers.get_x() + 1);
+                self.machine.registers.set_sw(match self.machine.registers.get_x().cmp(&r1_val) {
+                    std::cmp::Ordering::Less => -1,
+                    std::cmp::Ordering::Equal => 0,
+                    std::cmp::Ordering::Greater => 1,
+                });
+            }
             Opcode::Svc => todo!("SVC"),
             _ => return false,
         };

@@ -12,7 +12,7 @@ pub fn to_i24(val: i32) -> i32 {
 }
 
 pub fn get_r1_r2(val: &u8) -> (u8, u8) {
-    let r1 = val & 0xF0;
+    let r1 = (val & 0xF0) >> 4;
     let r2 = val & 0x0F;
     (r1, r2)
 }
