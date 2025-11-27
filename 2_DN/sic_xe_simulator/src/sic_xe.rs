@@ -25,7 +25,7 @@ pub struct FormatSicF3F4Bits {
     p: bool,
     e: bool,
 }
-pub fn get_FormatSicF3F4Bits(opcode: &u8, first_byte: &u8) -> FormatSicF3F4Bits {
+pub fn get_format_sic_f3_f4_bits(opcode: &u8, first_byte: &u8) -> FormatSicF3F4Bits {
     FormatSicF3F4Bits {
         n: opcode & 0b0000_0010 == 1,
         i: opcode & 0b0000_0001 == 1,
@@ -35,6 +35,10 @@ pub fn get_FormatSicF3F4Bits(opcode: &u8, first_byte: &u8) -> FormatSicF3F4Bits 
         e: first_byte & 0b0001_0000 == 1,
     }
 }
-pub fn isFormatSic(bits: &FormatSicF3F4Bits) -> bool { return bits.n == false && bits.i == false; }
-pub fn isFormatF3(bits: &FormatSicF3F4Bits) -> bool { return bits.e == false }
-pub fn isFormatF4(bits: &FormatSicF3F4Bits) -> bool { return bits.e == true }
+pub fn is_format_sic(bits: &FormatSicF3F4Bits) -> bool {
+    return bits.n == false && bits.i == false;
+}
+pub fn is_format_f3(bits: &FormatSicF3F4Bits) -> bool { return bits.e == false }
+pub fn is_format_f4(bits: &FormatSicF3F4Bits) -> bool { return bits.e == true }
+pub fn is_immediate(bits: &FormatSicF3F4Bits) -> bool { return bits.i }
+pub fn is_indirect(bits: &FormatSicF3F4Bits) -> bool { return bits.n }

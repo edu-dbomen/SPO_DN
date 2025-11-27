@@ -5,7 +5,10 @@ use std::sync::{Arc, Mutex};
 
 use crate::{
     machine::{opcodes::Opcode, Machine},
-    sic_xe::{get_FormatSicF3F4Bits, get_r1_r2},
+    sic_xe::{
+        get_format_sic_f3_f4_bits, get_r1_r2, is_format_f3, is_format_f4, is_format_sic,
+        FormatSicF3F4Bits,
+    },
 };
 
 const MAX_HZ: i64 = 1_000_000_000;
@@ -129,22 +132,31 @@ impl Processor {
     /// \   SIC  -> 1b,15b == x,addr
     /// \   F3   -> 1b,1b,1b,1b,12b == x,b,p,e,offset
     /// \   F4   -> 1b,1b,1b,1b,20b == x,b,p,e,addr
-    /// return:
-    /// \   true -> executed F3
-    /// \   false -> not F3
     fn exec_sic_f3_f4(
-        &self,
+        &mut self,
         opcode: &Opcode,
         first_byte: &u8,
         second_byte: &u8,
         third_byte: &u8,
     ) -> bool {
-        let bits = get_FormatSicF3F4Bits(&first_byte, &second_byte);
+        let bits = get_format_sic_f3_f4_bits(&first_byte, &second_byte);
+        let addr: u32 = {
+            if is_format_sic(&bits) {
+                ((second_byte & 0x7F) as u32) << 8 | *third_byte as u32
+            } else if is_format_f3(&bits) {
+                ((second_byte & 0x0F) as u32) << 8 | *third_byte as u32
+            } else if is_format_f4(&bits) {
+                let fourth_byte = self.fetch();
+                ((second_byte & 0x0F) as u32) << 16 | (*third_byte as u32) << 8 | fourth_byte as u32
+            } else {
+                panic!("INVALID STATE");
+            }
+        };
 
         match opcode {
             // ***** immediate addressing not possible *****
             // stores
-            Opcode::Sta => 1 + 1, //todo!("STA"),
+            Opcode::Sta => todo!("STA"),
             Opcode::Stx => todo!("STX"),
             Opcode::Stl => todo!("STL"),
             Opcode::Stch => todo!("STCH"),
