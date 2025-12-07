@@ -6,8 +6,8 @@ use std::sync::{Arc, Mutex};
 use crate::{
     machine::{opcodes::Opcode, Machine},
     sic_xe::{
-        get_format_sic_f3_f4_bits, get_r1_r2, is_format_f3, is_format_f4, is_format_sic,
-        u8arr_to_i24, FormatSicF3F4Bits,
+        get_format_sic_f3_f4_bits, get_r1_r2, i24_to_u8arr, is_format_f3, is_format_f4,
+        is_format_sic, is_immediate, resolve_address, u8arr_to_i24, FormatSicF3F4Bits,
     },
 };
 
@@ -33,32 +33,41 @@ impl Processor {
 
     fn execute_instruction(&mut self) -> () {
         let byte = self.fetch();
-        let opcode = match Opcode::from_byte(byte) {
+        let opcode = match Opcode::from_byte(byte & 0xFC) {
             Some(opcode) => opcode,
             None => {
                 Processor::invalid_opcode(byte);
                 return;
             }
         };
+        println!("\nbyte1={}", byte & 0xFC);
 
         if self.exec_f1(&opcode) {
             return;
         }
 
         let operand = self.fetch();
+        println!("byte2={}", operand);
         if self.exec_f2(&opcode, &operand) {
             return;
         }
 
         let third_byte = self.fetch();
+        println!("byte3={}", third_byte);
         if !self.exec_sic_f3_f4(&opcode, &byte, &operand, &third_byte) {
             panic!("??? exec failed. Looks like I forgot to add a opcode to arms!?");
+        }
+
+        // TODO DEBUG: print memory
+        for i in 0..100 {
+            print!("{:0>2x} ", self.machine.memory.get_byte(i));
         }
     }
 
     /// fetch next 8b and pc++
     fn fetch(&mut self) -> u8 {
         let pc = self.machine.registers.get_pc();
+        println!("pc={}", pc);
         self.machine.registers.set_pc(pc + 1);
         self.machine.memory.get_byte(pc.try_into().unwrap())
     }
@@ -88,6 +97,24 @@ impl Processor {
     /// \   true -> executed F2
     /// \   false -> not F2
     fn exec_f2(&mut self, opcode: &Opcode, operand: &u8) -> bool {
+        // make sure its one of the opcodes
+        if !matches!(
+            opcode,
+            Opcode::Addr
+                | Opcode::Subr
+                | Opcode::Mulr
+                | Opcode::Divr
+                | Opcode::Compr
+                | Opcode::Shiftl
+                | Opcode::Shiftr
+                | Opcode::Rmo
+                | Opcode::Clear
+                | Opcode::Tixr
+                | Opcode::Svc
+        ) {
+            return false;
+        };
+
         let (r1, r2) = get_r1_r2(&operand);
         let r1_val = self.machine.registers.get_reg(r1.try_into().unwrap());
         let r2_val = self.machine.registers.get_reg(r2.try_into().unwrap());
@@ -147,6 +174,7 @@ impl Processor {
                 ((second_byte & 0x0F) as u32) << 8 | *third_byte as u32
             } else if is_format_f4(&bits) {
                 let fourth_byte = self.fetch();
+                println!("byte4={}\n", fourth_byte);
                 ((second_byte & 0x0F) as u32) << 16 | (*third_byte as u32) << 8 | fourth_byte as u32
             } else {
                 panic!("INVALID STATE");
@@ -157,49 +185,93 @@ impl Processor {
             // ***** immediate addressing not possible *****
             // stores
             Opcode::Sta => {
-                self.machine.memory.set_word(addr, self.machine.registers.get_a_as_bytes())
+                Processor::store_word(
+                    &bits,
+                    addr,
+                    self.machine.registers.get_a_as_bytes(),
+                    &mut self.machine,
+                );
             }
             Opcode::Stx => {
-                self.machine.memory.set_word(addr, self.machine.registers.get_x_as_bytes())
+                Processor::store_word(
+                    &bits,
+                    addr,
+                    self.machine.registers.get_x_as_bytes(),
+                    &mut self.machine,
+                );
             }
             Opcode::Stl => {
-                self.machine.memory.set_word(addr, self.machine.registers.get_l_as_bytes())
+                Processor::store_word(
+                    &bits,
+                    addr,
+                    self.machine.registers.get_l_as_bytes(),
+                    &mut self.machine,
+                );
             }
             Opcode::Stch => {
-                self.machine.memory.set_byte(addr, self.machine.registers.get_a_as_bytes()[2])
+                Processor::store_byte(
+                    &bits,
+                    addr,
+                    self.machine.registers.get_a_as_bytes()[2],
+                    &mut self.machine,
+                );
             }
             Opcode::Stb => {
-                self.machine.memory.set_word(addr, self.machine.registers.get_b_as_bytes())
+                Processor::store_word(
+                    &bits,
+                    addr,
+                    self.machine.registers.get_b_as_bytes(),
+                    &mut self.machine,
+                );
             }
             Opcode::Sts => {
-                self.machine.memory.set_word(addr, self.machine.registers.get_s_as_bytes())
+                Processor::store_word(
+                    &bits,
+                    addr,
+                    self.machine.registers.get_s_as_bytes(),
+                    &mut self.machine,
+                );
             }
             Opcode::Stf => Processor::not_implemented("STF"),
             Opcode::Stt => {
-                self.machine.memory.set_word(addr, self.machine.registers.get_t_as_bytes())
+                Processor::store_word(
+                    &bits,
+                    addr,
+                    self.machine.registers.get_t_as_bytes(),
+                    &mut self.machine,
+                );
             }
             Opcode::Stsw => {
-                self.machine.memory.set_word(addr, self.machine.registers.get_sw_as_bytes())
+                Processor::store_word(
+                    &bits,
+                    addr,
+                    self.machine.registers.get_sw_as_bytes(),
+                    &mut self.machine,
+                );
             }
 
             // jumps
             Opcode::Jeq => {
                 if self.machine.registers.get_sw() == 0 {
-                    self.machine.registers.set_pc(addr as i32);
+                    let address = resolve_address(&bits, addr, &mut self.machine) as i32;
+                    self.machine.registers.set_pc(address);
                 }
             }
             Opcode::Jgt => {
                 if self.machine.registers.get_sw() == 1 {
-                    self.machine.registers.set_pc(addr as i32);
+                    let address = resolve_address(&bits, addr, &mut self.machine) as i32;
+                    self.machine.registers.set_pc(address);
                 }
             }
             Opcode::Jlt => {
                 if self.machine.registers.get_sw() == -1 {
-                    self.machine.registers.set_pc(addr as i32);
+                    let address = resolve_address(&bits, addr, &mut self.machine) as i32;
+                    self.machine.registers.set_pc(address);
                 }
             }
             Opcode::J => {
-                self.machine.registers.set_pc(addr as i32);
+                let address = resolve_address(&bits, addr, &mut self.machine) as i32;
+                self.machine.registers.set_pc(address);
             }
             Opcode::Rsub => {
                 self.machine.registers.set_pc(self.machine.registers.get_l());
@@ -212,108 +284,93 @@ impl Processor {
             // ***** immediate addressing possible *****
             // loads
             Opcode::Lda => {
-                self.machine.registers.set_a_as_bytes(self.machine.memory.get_word(addr));
+                let word = Processor::load_word(&bits, addr, &mut self.machine);
+                self.machine.registers.set_a_as_bytes(word);
             }
             Opcode::Ldx => {
-                self.machine.registers.set_x_as_bytes(self.machine.memory.get_word(addr));
+                let word = Processor::load_word(&bits, addr, &mut self.machine);
+                self.machine.registers.set_x_as_bytes(word);
             }
             Opcode::Ldl => {
-                self.machine.registers.set_l_as_bytes(self.machine.memory.get_word(addr));
+                let word = Processor::load_word(&bits, addr, &mut self.machine);
+                self.machine.registers.set_l_as_bytes(word);
             }
             Opcode::Ldch => {
                 let current_bytes = self.machine.registers.get_a_as_bytes();
-                let new_bytes: [u8; 3] =
-                    [current_bytes[0], current_bytes[1], self.machine.memory.get_byte(addr)];
+                let byte = Processor::load_byte(&bits, addr, &mut self.machine);
+                let new_bytes: [u8; 3] = [current_bytes[0], current_bytes[1], byte];
                 self.machine.registers.set_a_as_bytes(new_bytes);
             }
             Opcode::Ldb => {
-                self.machine.registers.set_b_as_bytes(self.machine.memory.get_word(addr));
+                let word = Processor::load_word(&bits, addr, &mut self.machine);
+                self.machine.registers.set_b_as_bytes(word);
             }
             Opcode::Lds => {
-                self.machine.registers.set_s_as_bytes(self.machine.memory.get_word(addr));
+                let word = Processor::load_word(&bits, addr, &mut self.machine);
+                self.machine.registers.set_s_as_bytes(word);
             }
             Opcode::Ldf => Processor::not_implemented("LDF"),
             Opcode::Ldt => {
-                self.machine.registers.set_t_as_bytes(self.machine.memory.get_word(addr));
+                let word = Processor::load_word(&bits, addr, &mut self.machine);
+                self.machine.registers.set_t_as_bytes(word);
             }
 
             // arithmetic
             Opcode::Add => {
-                self.machine.registers.set_a(
-                    self.machine.registers.get_a()
-                        + u8arr_to_i24(self.machine.memory.get_word(addr)),
-                );
+                let word = u8arr_to_i24(Processor::load_word(&bits, addr, &mut self.machine));
+                println!("ADDING {} + {}", self.machine.registers.get_a(), word);
+                self.machine.registers.set_a(self.machine.registers.get_a() + word);
             }
             Opcode::Sub => {
-                self.machine.registers.set_a(
-                    self.machine.registers.get_a()
-                        - u8arr_to_i24(self.machine.memory.get_word(addr)),
-                );
+                let word = u8arr_to_i24(Processor::load_word(&bits, addr, &mut self.machine));
+                self.machine.registers.set_a(self.machine.registers.get_a() - word);
             }
             Opcode::Mul => {
-                self.machine.registers.set_a(
-                    self.machine.registers.get_a()
-                        * u8arr_to_i24(self.machine.memory.get_word(addr)),
-                );
+                let word = u8arr_to_i24(Processor::load_word(&bits, addr, &mut self.machine));
+                self.machine.registers.set_a(self.machine.registers.get_a() * word);
             }
             Opcode::Div => {
-                self.machine.registers.set_a(
-                    self.machine.registers.get_a()
-                        / u8arr_to_i24(self.machine.memory.get_word(addr)),
-                );
+                let word = u8arr_to_i24(Processor::load_word(&bits, addr, &mut self.machine));
+                self.machine.registers.set_a(self.machine.registers.get_a() / word);
             }
             Opcode::And => {
-                self.machine.registers.set_a(
-                    self.machine.registers.get_a()
-                        & u8arr_to_i24(self.machine.memory.get_word(addr)),
-                );
+                let word = u8arr_to_i24(Processor::load_word(&bits, addr, &mut self.machine));
+                self.machine.registers.set_a(self.machine.registers.get_a() & word);
             }
             Opcode::Or => {
-                self.machine.registers.set_a(
-                    self.machine.registers.get_a()
-                        | u8arr_to_i24(self.machine.memory.get_word(addr)),
-                );
+                let word = u8arr_to_i24(Processor::load_word(&bits, addr, &mut self.machine));
+                self.machine.registers.set_a(self.machine.registers.get_a() | word);
             }
             Opcode::Comp => {
-                self.machine.registers.set_sw(
-                    match self
-                        .machine
-                        .registers
-                        .get_a()
-                        .cmp(&u8arr_to_i24(self.machine.memory.get_word(addr)))
-                    {
-                        std::cmp::Ordering::Less => -1,
-                        std::cmp::Ordering::Equal => 0,
-                        std::cmp::Ordering::Greater => 1,
-                    },
-                );
+                let word = u8arr_to_i24(Processor::load_word(&bits, addr, &mut self.machine));
+                self.machine.registers.set_sw(match self.machine.registers.get_a().cmp(&word) {
+                    std::cmp::Ordering::Less => -1,
+                    std::cmp::Ordering::Equal => 0,
+                    std::cmp::Ordering::Greater => 1,
+                });
             }
             Opcode::Tix => {
                 self.machine.registers.set_x(self.machine.registers.get_x() + 1);
-                self.machine.registers.set_sw(
-                    match self
-                        .machine
-                        .registers
-                        .get_x()
-                        .cmp(&u8arr_to_i24(self.machine.memory.get_word(addr)))
-                    {
-                        std::cmp::Ordering::Less => -1,
-                        std::cmp::Ordering::Equal => 0,
-                        std::cmp::Ordering::Greater => 1,
-                    },
-                );
+                let word = u8arr_to_i24(Processor::load_word(&bits, addr, &mut self.machine));
+                self.machine.registers.set_sw(match self.machine.registers.get_x().cmp(&word) {
+                    std::cmp::Ordering::Less => -1,
+                    std::cmp::Ordering::Equal => 0,
+                    std::cmp::Ordering::Greater => 1,
+                });
             }
 
             // input/output
             Opcode::Rd => {
                 let current_bytes = self.machine.registers.get_a_as_bytes();
+                let address = resolve_address(&bits, addr, &mut self.machine);
                 let new_bytes: [u8; 3] =
-                    [current_bytes[0], current_bytes[1], self.machine.get_device(addr).read()];
+                    [current_bytes[0], current_bytes[1], self.machine.get_device(address).read()];
                 self.machine.registers.set_a_as_bytes(new_bytes);
             }
             Opcode::Wd => {
+                let address = resolve_address(&bits, addr, &mut self.machine);
                 let val_a = self.machine.registers.get_a_as_bytes()[2];
-                self.machine.get_device(addr).write(val_a);
+                self.machine.get_device(address).write(val_a);
             }
             Opcode::Td => Processor::not_implemented("TD"),
 
@@ -334,6 +391,50 @@ impl Processor {
         true
     }
 
+    // helpers
+    fn store_word(
+        bits: &FormatSicF3F4Bits,
+        mut address: usize,
+        word: [u8; 3],
+        machine: &mut Machine,
+    ) -> () {
+        address = resolve_address(bits, address, machine);
+        println!(
+            "DOING STORE WORD at {} with word [{}, {}, {}]",
+            address, word[0], word[1], word[2]
+        );
+        machine.memory.set_word(address, word);
+    }
+
+    fn store_byte(
+        bits: &FormatSicF3F4Bits,
+        mut address: usize,
+        byte: u8,
+        machine: &mut Machine,
+    ) -> () {
+        address = resolve_address(bits, address, machine);
+        println!("DOING STORE BYTE at {} with word {}", address, byte);
+        machine.memory.set_byte(address, byte);
+    }
+
+    fn load_word(bits: &FormatSicF3F4Bits, mut address: usize, machine: &mut Machine) -> [u8; 3] {
+        if is_immediate(bits) {
+            return i24_to_u8arr(address as i32);
+        }
+
+        address = resolve_address(bits, address, machine);
+        machine.memory.get_word(address)
+    }
+
+    fn load_byte(bits: &FormatSicF3F4Bits, mut address: usize, machine: &mut Machine) -> u8 {
+        if is_immediate(bits) {
+            return (address & 0xFF) as u8;
+        }
+
+        address = resolve_address(bits, address, machine);
+        machine.memory.get_byte(address)
+    }
+
     // errors
     fn not_implemented(mnemonic: &str) -> () {
         panic!("{mnemonic}: NOT IMPLMENTED!");
@@ -341,7 +442,6 @@ impl Processor {
     fn invalid_opcode(invalid_opcode_byte: u8) -> () {
         panic!("{invalid_opcode_byte}: NOT VALID OPCODE!");
     }
-    fn invalid_addressing() -> () {}
 }
 
 // ProcessorHandle

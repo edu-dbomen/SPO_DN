@@ -55,18 +55,17 @@ impl Registers {
     pub fn set_b(&mut self, val: i32) -> () { self.b = i32_to_i24(val); }
     pub fn set_s(&mut self, val: i32) -> () { self.s = i32_to_i24(val); }
     pub fn set_t(&mut self, val: i32) -> () { self.t = i32_to_i24(val); }
-    pub fn set_f(&mut self, val: f64) -> () { self.f = val }
+    pub fn set_f(&mut self, val: f64) -> () { self.f = val; }
     pub fn set_pc(&mut self, val: i32) -> () { self.pc = i32_to_i24(val); }
     pub fn set_sw(&mut self, val: i32) -> () { self.sw = i32_to_i24(val); }
-    pub fn set_a_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(self.a) }
-    pub fn set_x_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(self.x) }
-    pub fn set_l_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(self.l) }
-    pub fn set_b_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(self.b) }
-    pub fn set_s_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(self.s) }
-    pub fn set_t_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(self.t) }
-    pub fn set_f(&mut self, val: f64) -> () { todo!("NOT IMPLEMENTED") }
-    pub fn set_pc_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(self.pc) }
-    pub fn set_sw_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(self.sw) }
+    pub fn set_a_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(val); }
+    pub fn set_x_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(val); }
+    pub fn set_l_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(val); }
+    pub fn set_b_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(val); }
+    pub fn set_s_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(val); }
+    pub fn set_t_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(val); }
+    pub fn set_pc_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(val); }
+    pub fn set_sw_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(val); }
 
     /// **UNSTABLE** TODO: Fails on index 6 for now
     /// Get register by index

@@ -1,8 +1,14 @@
+use crate::machine::Machine;
+
 pub const MASK_WORD: i32 = 0xFFFFFF;
 pub const MASK_FIRST_BYTE: i32 = 0xFF0000;
 pub const MASK_SECOND_BYTE: i32 = 0x00FF00;
 pub const MASK_THIRD_BYTE: i32 = 0x0000FF;
 pub const SIGN_BIT: i32 = 0x800000;
+
+// **********************************************
+//  CONVERSION helpers
+// **********************************************
 
 /// converts i32 to i24 (word)
 pub fn i32_to_i24(val: i32) -> i32 {
@@ -31,7 +37,7 @@ pub fn u8arr_to_i24(val: [u8; 3]) -> i32 {
     v = ((val[0] as i32) << 16) | ((val[1] as i32) << 8) | (val[2] as i32);
 
     if v & 0x0080_0000 != 0 {
-        v | 0xFF00_0000
+        v | 0xFF00_0000u32 as i32
     } else {
         v
     }
@@ -42,6 +48,10 @@ pub fn get_r1_r2(val: &u8) -> (u8, u8) {
     let r2 = val & 0x0F;
     (r1, r2)
 }
+
+// **********************************************
+//  BITS helpers
+// **********************************************
 
 pub struct FormatSicF3F4Bits {
     n: bool,
@@ -66,5 +76,20 @@ pub fn is_format_sic(bits: &FormatSicF3F4Bits) -> bool {
 }
 pub fn is_format_f3(bits: &FormatSicF3F4Bits) -> bool { return bits.e == false }
 pub fn is_format_f4(bits: &FormatSicF3F4Bits) -> bool { return bits.e == true }
-pub fn is_immediate(bits: &FormatSicF3F4Bits) -> bool { return bits.i }
-pub fn is_indirect(bits: &FormatSicF3F4Bits) -> bool { return bits.n }
+pub fn is_immediate(bits: &FormatSicF3F4Bits) -> bool { return bits.i && !bits.n }
+pub fn is_indirect(bits: &FormatSicF3F4Bits) -> bool { return !bits.i && bits.n }
+
+pub fn is_pc_relative(bits: &FormatSicF3F4Bits) -> bool { return !bits.p && bits.b }
+pub fn is_base_relative(bits: &FormatSicF3F4Bits) -> bool { return !bits.p && bits.b }
+
+pub fn is_x(bits: &FormatSicF3F4Bits) -> bool { return bits.x }
+
+pub fn resolve_address(bits: &FormatSicF3F4Bits, mut address: usize, machine: &Machine) -> usize {
+    if is_indirect(bits) {
+        address = u8arr_to_i24(machine.memory.get_word(address)) as usize;
+        if is_x(bits) {
+            address += machine.registers.get_x() as usize;
+        }
+    }
+    address
+}
