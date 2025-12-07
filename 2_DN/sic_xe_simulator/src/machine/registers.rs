@@ -1,4 +1,6 @@
-use crate::sic_xe::to_i24;
+use crate::sic_xe::i24_to_u8arr;
+use crate::sic_xe::i32_to_i24;
+use crate::sic_xe::u8arr_to_i24;
 
 pub struct Registers {
     /// 24b
@@ -37,16 +39,34 @@ impl Registers {
     pub fn get_f(&self) -> f64 { self.f }
     pub fn get_pc(&self) -> i32 { self.pc }
     pub fn get_sw(&self) -> i32 { self.sw }
+    pub fn get_a_as_bytes(&self) -> [u8; 3] { i24_to_u8arr(self.a) }
+    pub fn get_x_as_bytes(&self) -> [u8; 3] { i24_to_u8arr(self.x) }
+    pub fn get_l_as_bytes(&self) -> [u8; 3] { i24_to_u8arr(self.l) }
+    pub fn get_b_as_bytes(&self) -> [u8; 3] { i24_to_u8arr(self.b) }
+    pub fn get_s_as_bytes(&self) -> [u8; 3] { i24_to_u8arr(self.s) }
+    pub fn get_t_as_bytes(&self) -> [u8; 3] { i24_to_u8arr(self.t) }
+    pub fn get_f_as_bytes(&self) -> f64 { self.f }
+    pub fn get_pc_as_bytes(&self) -> [u8; 3] { i24_to_u8arr(self.pc) }
+    pub fn get_sw_as_bytes(&self) -> [u8; 3] { i24_to_u8arr(self.sw) }
 
-    pub fn set_a(&mut self, val: i32) -> () { self.a = to_i24(val); }
-    pub fn set_x(&mut self, val: i32) -> () { self.x = to_i24(val); }
-    pub fn set_l(&mut self, val: i32) -> () { self.l = to_i24(val); }
-    pub fn set_b(&mut self, val: i32) -> () { self.b = to_i24(val); }
-    pub fn set_s(&mut self, val: i32) -> () { self.s = to_i24(val); }
-    pub fn set_t(&mut self, val: i32) -> () { self.t = to_i24(val); }
+    pub fn set_a(&mut self, val: i32) -> () { self.a = i32_to_i24(val); }
+    pub fn set_x(&mut self, val: i32) -> () { self.x = i32_to_i24(val); }
+    pub fn set_l(&mut self, val: i32) -> () { self.l = i32_to_i24(val); }
+    pub fn set_b(&mut self, val: i32) -> () { self.b = i32_to_i24(val); }
+    pub fn set_s(&mut self, val: i32) -> () { self.s = i32_to_i24(val); }
+    pub fn set_t(&mut self, val: i32) -> () { self.t = i32_to_i24(val); }
     pub fn set_f(&mut self, val: f64) -> () { self.f = val }
-    pub fn set_pc(&mut self, val: i32) -> () { self.pc = to_i24(val); }
-    pub fn set_sw(&mut self, val: i32) -> () { self.sw = to_i24(val); }
+    pub fn set_pc(&mut self, val: i32) -> () { self.pc = i32_to_i24(val); }
+    pub fn set_sw(&mut self, val: i32) -> () { self.sw = i32_to_i24(val); }
+    pub fn set_a_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(self.a) }
+    pub fn set_x_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(self.x) }
+    pub fn set_l_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(self.l) }
+    pub fn set_b_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(self.b) }
+    pub fn set_s_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(self.s) }
+    pub fn set_t_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(self.t) }
+    pub fn set_f(&mut self, val: f64) -> () { todo!("NOT IMPLEMENTED") }
+    pub fn set_pc_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(self.pc) }
+    pub fn set_sw_as_bytes(&self, val: [u8; 3]) -> () { u8arr_to_i24(self.sw) }
 
     /// **UNSTABLE** TODO: Fails on index 6 for now
     /// Get register by index

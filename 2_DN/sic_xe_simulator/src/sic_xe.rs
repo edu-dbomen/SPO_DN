@@ -1,13 +1,39 @@
 pub const MASK_WORD: i32 = 0xFFFFFF;
+pub const MASK_FIRST_BYTE: i32 = 0xFF0000;
+pub const MASK_SECOND_BYTE: i32 = 0x00FF00;
+pub const MASK_THIRD_BYTE: i32 = 0x0000FF;
 pub const SIGN_BIT: i32 = 0x800000;
 
 /// converts i32 to i24 (word)
-pub fn to_i24(val: i32) -> i32 {
+pub fn i32_to_i24(val: i32) -> i32 {
     let masked = val & MASK_WORD;
     if masked & SIGN_BIT != 0 {
         masked | !MASK_WORD
     } else {
         masked
+    }
+}
+
+/// converts i24 to [u8;3]
+#[rustfmt::skip]
+pub fn i24_to_u8arr(val: i32) -> [u8; 3] {
+    let v = val & MASK_WORD;
+    [ 
+        ((v >> 16) & 0xFF) as u8,
+        ((v >> 8) & 0xFF) as u8,
+        (v & 0xFF) as u8,
+    ]
+}
+
+/// converts [u8;3] to i24
+pub fn u8arr_to_i24(val: [u8; 3]) -> i32 {
+    let mut v: i32 = 0;
+    v = ((val[0] as i32) << 16) | ((val[1] as i32) << 8) | (val[2] as i32);
+
+    if v & 0x0080_0000 != 0 {
+        v | 0xFF00_0000
+    } else {
+        v
     }
 }
 

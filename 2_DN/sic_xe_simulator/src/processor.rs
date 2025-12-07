@@ -7,7 +7,7 @@ use crate::{
     machine::{opcodes::Opcode, Machine},
     sic_xe::{
         get_format_sic_f3_f4_bits, get_r1_r2, is_format_f3, is_format_f4, is_format_sic,
-        FormatSicF3F4Bits,
+        u8arr_to_i24, FormatSicF3F4Bits,
     },
 };
 
@@ -72,11 +72,11 @@ impl Processor {
             Opcode::Float => {
                 self.machine.registers.set_f(self.machine.registers.get_a().try_into().unwrap());
             }
-            Opcode::Fix => todo!("FIX"),
-            Opcode::Norm => todo!("NORM"),
-            Opcode::Sio => todo!("SIO"),
-            Opcode::Hio => todo!("HIO"),
-            Opcode::Tio => todo!("TIO"),
+            Opcode::Fix => Processor::not_implemented("FIX"),
+            Opcode::Norm => Processor::not_implemented("NORM"),
+            Opcode::Sio => Processor::not_implemented("SIO"),
+            Opcode::Hio => Processor::not_implemented("HIO"),
+            Opcode::Tio => Processor::not_implemented("TIO"),
             _ => return false,
         };
 
@@ -118,7 +118,7 @@ impl Processor {
                     std::cmp::Ordering::Greater => 1,
                 });
             }
-            Opcode::Svc => todo!("SVC"),
+            Opcode::Svc => Processor::not_implemented("SVC"),
             _ => return false,
         };
 
@@ -140,7 +140,7 @@ impl Processor {
         third_byte: &u8,
     ) -> bool {
         let bits = get_format_sic_f3_f4_bits(&first_byte, &second_byte);
-        let addr: u32 = {
+        let addr = {
             if is_format_sic(&bits) {
                 ((second_byte & 0x7F) as u32) << 8 | *third_byte as u32
             } else if is_format_f3(&bits) {
@@ -151,66 +151,183 @@ impl Processor {
             } else {
                 panic!("INVALID STATE");
             }
-        };
+        } as usize;
 
         match opcode {
             // ***** immediate addressing not possible *****
             // stores
-            Opcode::Sta => todo!("STA"),
-            Opcode::Stx => todo!("STX"),
-            Opcode::Stl => todo!("STL"),
-            Opcode::Stch => todo!("STCH"),
-            Opcode::Stb => todo!("STB"),
-            Opcode::Sts => todo!("STS"),
-            Opcode::Stf => todo!("STF"),
-            Opcode::Stt => todo!("STT"),
-            Opcode::Stsw => todo!("STSW"),
+            Opcode::Sta => {
+                self.machine.memory.set_word(addr, self.machine.registers.get_a_as_bytes())
+            }
+            Opcode::Stx => {
+                self.machine.memory.set_word(addr, self.machine.registers.get_x_as_bytes())
+            }
+            Opcode::Stl => {
+                self.machine.memory.set_word(addr, self.machine.registers.get_l_as_bytes())
+            }
+            Opcode::Stch => {
+                self.machine.memory.set_byte(addr, self.machine.registers.get_a_as_bytes()[2])
+            }
+            Opcode::Stb => {
+                self.machine.memory.set_word(addr, self.machine.registers.get_b_as_bytes())
+            }
+            Opcode::Sts => {
+                self.machine.memory.set_word(addr, self.machine.registers.get_s_as_bytes())
+            }
+            Opcode::Stf => Processor::not_implemented("STF"),
+            Opcode::Stt => {
+                self.machine.memory.set_word(addr, self.machine.registers.get_t_as_bytes())
+            }
+            Opcode::Stsw => {
+                self.machine.memory.set_word(addr, self.machine.registers.get_sw_as_bytes())
+            }
 
             // jumps
-            Opcode::Jeq => todo!("JEQ"),
-            Opcode::Jgt => todo!("JGT"),
-            Opcode::Jlt => todo!("JLT"),
-            Opcode::J => todo!("J"),
-            Opcode::Rsub => todo!("RSUB"),
-            Opcode::Jsub => todo!("JSUB"),
+            Opcode::Jeq => {
+                if self.machine.registers.get_sw() == 0 {
+                    self.machine.registers.set_pc(addr as i32);
+                }
+            }
+            Opcode::Jgt => {
+                if self.machine.registers.get_sw() == 1 {
+                    self.machine.registers.set_pc(addr as i32);
+                }
+            }
+            Opcode::Jlt => {
+                if self.machine.registers.get_sw() == -1 {
+                    self.machine.registers.set_pc(addr as i32);
+                }
+            }
+            Opcode::J => {
+                self.machine.registers.set_pc(addr as i32);
+            }
+            Opcode::Rsub => {
+                self.machine.registers.set_pc(self.machine.registers.get_l());
+            }
+            Opcode::Jsub => {
+                self.machine.registers.set_l(self.machine.registers.get_pc());
+                self.machine.registers.set_pc(addr as i32);
+            }
 
             // ***** immediate addressing possible *****
             // loads
-            Opcode::Lda => todo!("LDA"),
-            Opcode::Ldx => todo!("LDX"),
-            Opcode::Ldl => todo!("LDL"),
-            Opcode::Ldch => todo!("LDCH"),
-            Opcode::Ldb => todo!("LDB"),
-            Opcode::Lds => todo!("LDS"),
-            Opcode::Ldf => todo!("LDF"),
-            Opcode::Ldt => todo!("LDT"),
+            Opcode::Lda => {
+                self.machine.registers.set_a_as_bytes(self.machine.memory.get_word(addr));
+            }
+            Opcode::Ldx => {
+                self.machine.registers.set_x_as_bytes(self.machine.memory.get_word(addr));
+            }
+            Opcode::Ldl => {
+                self.machine.registers.set_l_as_bytes(self.machine.memory.get_word(addr));
+            }
+            Opcode::Ldch => {
+                let current_bytes = self.machine.registers.get_a_as_bytes();
+                let new_bytes: [u8; 3] =
+                    [current_bytes[0], current_bytes[1], self.machine.memory.get_byte(addr)];
+                self.machine.registers.set_a_as_bytes(new_bytes);
+            }
+            Opcode::Ldb => {
+                self.machine.registers.set_b_as_bytes(self.machine.memory.get_word(addr));
+            }
+            Opcode::Lds => {
+                self.machine.registers.set_s_as_bytes(self.machine.memory.get_word(addr));
+            }
+            Opcode::Ldf => Processor::not_implemented("LDF"),
+            Opcode::Ldt => {
+                self.machine.registers.set_t_as_bytes(self.machine.memory.get_word(addr));
+            }
 
             // arithmetic
-            Opcode::Add => todo!("ADD"),
-            Opcode::Sub => todo!("SUB"),
-            Opcode::Mul => todo!("MUL"),
-            Opcode::Div => todo!("DIV"),
-            Opcode::And => todo!("AND"),
-            Opcode::Or => todo!("OR"),
-            Opcode::Comp => todo!("COMP"),
-            Opcode::Tix => todo!("TIX"),
+            Opcode::Add => {
+                self.machine.registers.set_a(
+                    self.machine.registers.get_a()
+                        + u8arr_to_i24(self.machine.memory.get_word(addr)),
+                );
+            }
+            Opcode::Sub => {
+                self.machine.registers.set_a(
+                    self.machine.registers.get_a()
+                        - u8arr_to_i24(self.machine.memory.get_word(addr)),
+                );
+            }
+            Opcode::Mul => {
+                self.machine.registers.set_a(
+                    self.machine.registers.get_a()
+                        * u8arr_to_i24(self.machine.memory.get_word(addr)),
+                );
+            }
+            Opcode::Div => {
+                self.machine.registers.set_a(
+                    self.machine.registers.get_a()
+                        / u8arr_to_i24(self.machine.memory.get_word(addr)),
+                );
+            }
+            Opcode::And => {
+                self.machine.registers.set_a(
+                    self.machine.registers.get_a()
+                        & u8arr_to_i24(self.machine.memory.get_word(addr)),
+                );
+            }
+            Opcode::Or => {
+                self.machine.registers.set_a(
+                    self.machine.registers.get_a()
+                        | u8arr_to_i24(self.machine.memory.get_word(addr)),
+                );
+            }
+            Opcode::Comp => {
+                self.machine.registers.set_sw(
+                    match self
+                        .machine
+                        .registers
+                        .get_a()
+                        .cmp(&u8arr_to_i24(self.machine.memory.get_word(addr)))
+                    {
+                        std::cmp::Ordering::Less => -1,
+                        std::cmp::Ordering::Equal => 0,
+                        std::cmp::Ordering::Greater => 1,
+                    },
+                );
+            }
+            Opcode::Tix => {
+                self.machine.registers.set_x(self.machine.registers.get_x() + 1);
+                self.machine.registers.set_sw(
+                    match self
+                        .machine
+                        .registers
+                        .get_x()
+                        .cmp(&u8arr_to_i24(self.machine.memory.get_word(addr)))
+                    {
+                        std::cmp::Ordering::Less => -1,
+                        std::cmp::Ordering::Equal => 0,
+                        std::cmp::Ordering::Greater => 1,
+                    },
+                );
+            }
 
             // input/output
-            Opcode::Rd => todo!("RD"),
-            Opcode::Wd => todo!("WD"),
-            Opcode::Td => todo!("TD"),
+            Opcode::Rd => {
+                let current_bytes = self.machine.registers.get_a_as_bytes();
+                let new_bytes: [u8; 3] =
+                    [current_bytes[0], current_bytes[1], self.machine.get_device(addr).read()];
+                self.machine.registers.set_a_as_bytes(new_bytes);
+            }
+            Opcode::Wd => {
+                let val_a = self.machine.registers.get_a_as_bytes()[2];
+                self.machine.get_device(addr).write(val_a);
+            }
+            Opcode::Td => Processor::not_implemented("TD"),
 
             // floating point arithmetic
-            Opcode::Addf => todo!("ADDF"),
-            Opcode::Subf => todo!("SUBF"),
-            Opcode::Mulf => todo!("MULF"),
-            Opcode::Divf => todo!("DIVF"),
-            Opcode::Compf => todo!("COMPF"),
+            Opcode::Addf => Processor::not_implemented("ADDF"),
+            Opcode::Subf => Processor::not_implemented("SUBF"),
+            Opcode::Mulf => Processor::not_implemented("MULF"),
+            Opcode::Divf => Processor::not_implemented("DIVF"),
+            Opcode::Compf => Processor::not_implemented("COMPF"),
 
             // others
-            Opcode::Lps => todo!("LPS"),
-            Opcode::Sti => todo!("STI"),
-            Opcode::Ssk => todo!("SSK"),
+            Opcode::Lps => Processor::not_implemented("LPS"),
+            Opcode::Sti => Processor::not_implemented("STI"),
+            Opcode::Ssk => Processor::not_implemented("SSK"),
             _ => return false,
         };
 
@@ -218,9 +335,12 @@ impl Processor {
     }
 
     // errors
-    // TODO:
-    fn not_implemented(mnemonic: String) -> () {}
-    fn invalid_opcode(invalid_opcode_byte: u8) -> () {}
+    fn not_implemented(mnemonic: &str) -> () {
+        panic!("{mnemonic}: NOT IMPLMENTED!");
+    }
+    fn invalid_opcode(invalid_opcode_byte: u8) -> () {
+        panic!("{invalid_opcode_byte}: NOT VALID OPCODE!");
+    }
     fn invalid_addressing() -> () {}
 }
 
