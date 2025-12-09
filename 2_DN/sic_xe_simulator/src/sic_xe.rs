@@ -36,7 +36,7 @@ pub fn i24_to_u8arr(val: i32) -> [u8; 3] {
 /// converts [u8;3] to i24
 pub fn u8arr_to_i24(val: [u8; 3]) -> i32 {
     let v: i32 = ((val[0] as i32) << 16) | ((val[1] as i32) << 8) | (val[2] as i32);
-    println!("v={:x}", v);
+    // println!("v={:x}", v);
 
     if v & 0x0080_0000 != 0 {
         v | 0xFF00_0000u32 as i32
@@ -71,7 +71,7 @@ impl fmt::Display for FormatSicF3F4Bits {
 }
 
 pub fn get_format_sic_f3_f4_bits(opcode: &u8, first_byte: &u8) -> FormatSicF3F4Bits {
-    println!("got bytes: {:08b} {:08b}", opcode, first_byte);
+    // println!("got bytes: {:08b} {:08b}", opcode, first_byte);
     FormatSicF3F4Bits {
         n: (opcode & 0b0000_0010) != 0,
         i: (opcode & 0b0000_0001) != 0,
@@ -95,7 +95,7 @@ pub fn is_base_relative(bits: &FormatSicF3F4Bits) -> bool { return !bits.p && bi
 pub fn is_x(bits: &FormatSicF3F4Bits) -> bool { return bits.x }
 
 pub fn resolve_address(bits: &FormatSicF3F4Bits, mut address: usize, machine: &Machine) -> usize {
-    println!("resolving address={}", address);
+    // println!("resolving address={}", address);
     if is_pc_relative(bits) {
         // note that address is a signed number for pc relative
         let mut saddress = address as i64;
@@ -106,15 +106,15 @@ pub fn resolve_address(bits: &FormatSicF3F4Bits, mut address: usize, machine: &M
                 saddress = !saddress;
                 saddress = saddress & 0x8FF;
 
-                println!("pc relative (negative): addr={}=={:08b}", saddress, saddress);
+                // println!("pc relative (negative): addr={}=={:08b}", saddress, saddress);
                 saddress = !saddress;
-                println!("pc relative (negative): bits inverted={}=={:08b}", saddress, saddress);
-                println!(
-                    "pc relative (negative): after={} = pc={} - oldaddr={}",
-                    (machine.registers.get_pc()) as i64 - saddress,
-                    machine.registers.get_pc() as i64,
-                    saddress
-                );
+                // println!("pc relative (negative): bits inverted={}=={:08b}", saddress, saddress);
+                // println!(
+                //     "pc relative (negative): after={} = pc={} - oldaddr={}",
+                //     (machine.registers.get_pc()) as i64 - saddress,
+                //     machine.registers.get_pc() as i64,
+                //     saddress
+                // );
             }
             saddress = (machine.registers.get_pc()) as i64 + saddress;
         } else if is_format_f4(bits) {
@@ -136,6 +136,6 @@ pub fn resolve_address(bits: &FormatSicF3F4Bits, mut address: usize, machine: &M
         address += machine.registers.get_x() as usize;
     }
 
-    println!("resolved address={}", address);
+    // println!("resolved address={}", address);
     address
 }

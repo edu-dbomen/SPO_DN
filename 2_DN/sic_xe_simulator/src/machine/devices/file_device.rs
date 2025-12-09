@@ -1,7 +1,7 @@
 use crate::machine::devices::device::Device;
 use std::{
     fs::{File, OpenOptions},
-    io::{Read, Write},
+    io::{ErrorKind, Read, Write},
 };
 
 pub struct FileDevice {
@@ -31,10 +31,17 @@ impl Device for FileDevice {
     fn test(&self) -> bool { true }
 
     fn read(&mut self) -> u8 {
-        let mut buf = [0u8, 1];
+        let mut buf = [0u8; 1];
 
-        let _ = self.open_file().read_exact(&mut buf).expect("File reading error");
-        buf[0]
+        // println!("READING file: {}", self.file_name);
+        match self.open_file().read_exact(&mut buf) {
+            Ok(()) => buf[0],
+            Err(e) if e.kind() == ErrorKind::UnexpectedEof => {
+                // EOF: define behavior here
+                0
+            }
+            Err(e) => panic!("File reading error: {e}"),
+        }
     }
 
     fn write(&mut self, val: u8) -> () {

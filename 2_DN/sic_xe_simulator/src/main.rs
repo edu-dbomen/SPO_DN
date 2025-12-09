@@ -29,7 +29,8 @@ fn test_processor() {
             .read(true)
             .create(true)
             // .open("./tests/arith.obj")
-            .open("./tests/horner.obj")
+            // .open("./tests/horner.obj")
+            .open("./tests/rec.obj")
             .expect("Could not open file");
 
         // load program at ./prog.obj

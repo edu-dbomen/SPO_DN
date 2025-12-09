@@ -9,8 +9,9 @@ use std::{
 use crate::{
     machine::{opcodes::Opcode, Machine},
     sic_xe::{
-        get_format_sic_f3_f4_bits, get_r1_r2, i24_to_u8arr, is_format_f3, is_format_f4,
-        is_format_sic, is_immediate, resolve_address, u8arr_to_i24, FormatSicF3F4Bits,
+        get_format_sic_f3_f4_bits, get_r1_r2, i24_to_u8arr, is_base_relative, is_format_f3,
+        is_format_f4, is_format_sic, is_immediate, is_pc_relative, resolve_address, u8arr_to_i24,
+        FormatSicF3F4Bits,
     },
 };
 
@@ -31,7 +32,7 @@ pub type ProcessorHandle = Arc<Mutex<Processor>>;
 impl Processor {
     pub fn new_handle() -> ProcessorHandle { Arc::new(Mutex::new(Processor::new())) }
     fn new() -> Self {
-        Self { machine: Machine::new(), speed: 100, timer: timer::Timer::new(), guard: None }
+        Self { machine: Machine::new(), speed: 1000, timer: timer::Timer::new(), guard: None }
     }
 
     fn execute_instruction(&mut self) -> () {
@@ -43,7 +44,7 @@ impl Processor {
                 return;
             }
         };
-        println!("\n{:?}", opcode);
+        // println!("\n{:?}", opcode);
         // println!("\nbyte1={:08b}", byte);
 
         if self.exec_f1(&opcode) {
@@ -67,23 +68,27 @@ impl Processor {
     }
 
     fn print_state(&self) -> () {
-        println!("STATE:\n-------------------------");
-        for i in 0..100 {
-            print!("{:0>2x} ", self.machine.memory.get_byte(i));
-        }
-        println!("\na={}", self.machine.registers.get_a());
-        println!("b={}", self.machine.registers.get_b());
-        println!("x={}", self.machine.registers.get_x());
-        println!("s={}", self.machine.registers.get_s());
-        println!("t={}", self.machine.registers.get_t());
-        println!("sw={}", self.machine.registers.get_sw());
-        println!("-------------------------\n");
+        // println!("STATE:\n-------------------------");
+        // for i in 0..400 {
+        //     if i % 16 == 0 {
+        //         print!("\n{:0>4x} ", i);
+        //     }
+        //     print!("{:0>2x} ", self.machine.memory.get_byte(i));
+        // }
+        // println!("\na={}", self.machine.registers.get_a());
+        // println!("b={}", self.machine.registers.get_b());
+        // println!("x={}", self.machine.registers.get_x());
+        // println!("s={}", self.machine.registers.get_s());
+        // println!("t={}", self.machine.registers.get_t());
+        // println!("l={}", self.machine.registers.get_l());
+        // println!("sw={}", self.machine.registers.get_sw());
+        // println!("-------------------------\n");
     }
 
     /// fetch next 8b and pc++
     fn fetch(&mut self) -> u8 {
         let pc = self.machine.registers.get_pc();
-        // println!("pc={}", pc);
+        // println!("pc=0x{:x}", pc);
         self.machine.registers.set_pc(pc + 1);
         self.machine.memory.get_byte(pc.try_into().unwrap())
     }
@@ -196,7 +201,7 @@ impl Processor {
                 panic!("INVALID STATE");
             }
         } as usize;
-        println!("bits={}", bits);
+        // println!("bits={}", bits);
 
         match opcode {
             // ***** immediate addressing not possible *****
@@ -295,7 +300,7 @@ impl Processor {
             }
             Opcode::Jsub => {
                 self.machine.registers.set_l(self.machine.registers.get_pc());
-                self.machine.registers.set_pc(addr as i32);
+                self.machine.registers.set_pc(resolve_address(&bits, addr, &self.machine) as i32);
             }
 
             // ***** immediate addressing possible *****
@@ -303,7 +308,7 @@ impl Processor {
             Opcode::Lda => {
                 let word = Processor::load_word(&bits, addr, &mut self.machine);
                 self.machine.registers.set_a_as_bytes(word);
-                println!("a is now={}", self.machine.registers.get_a());
+                // println!("a is now={}", self.machine.registers.get_a());
             }
             Opcode::Ldx => {
                 let word = Processor::load_word(&bits, addr, &mut self.machine);
@@ -336,7 +341,7 @@ impl Processor {
             // arithmetic
             Opcode::Add => {
                 let word = u8arr_to_i24(Processor::load_word(&bits, addr, &mut self.machine));
-                println!("ADDING {} + {}", self.machine.registers.get_a(), word);
+                // println!("ADDING {} + {}", self.machine.registers.get_a(), word);
                 self.machine.registers.set_a(self.machine.registers.get_a() + word);
             }
             Opcode::Sub => {
@@ -417,10 +422,10 @@ impl Processor {
         machine: &mut Machine,
     ) -> () {
         address = resolve_address(bits, address, machine);
-        println!(
-            "DOING STORE WORD at {} with word [{}, {}, {}]",
-            address, word[0], word[1], word[2]
-        );
+        // println!(
+        //     "DOING STORE WORD at {} with word [{}, {}, {}]",
+        //     address, word[0], word[1], word[2]
+        // );
         machine.memory.set_word(address, word);
     }
 
@@ -431,25 +436,37 @@ impl Processor {
         machine: &mut Machine,
     ) -> () {
         address = resolve_address(bits, address, machine);
-        println!("DOING STORE BYTE at {} with word {}", address, byte);
+        // println!("DOING STORE BYTE at {} with word {}", address, byte);
         machine.memory.set_byte(address, byte);
     }
 
     fn load_word(bits: &FormatSicF3F4Bits, mut address: usize, machine: &mut Machine) -> [u8; 3] {
         if is_immediate(bits) {
+            if is_pc_relative(bits) {
+                address += machine.registers.get_pc() as usize;
+            }
+            if is_base_relative(bits) {
+                address += machine.registers.get_b() as usize;
+            }
             return i24_to_u8arr(address as i32);
         }
 
-        println!("OG address={}", address);
+        // println!("OG address={}", address);
         address = resolve_address(bits, address, machine);
-        println!("resolved address={}", address);
+        // println!("resolved address={}", address);
         let word = machine.memory.get_word(address);
-        println!("word={:2x},{:2x},{:2x}", word[0], word[1], word[2]);
+        // println!("word={:2x},{:2x},{:2x}", word[0], word[1], word[2]);
         word
     }
 
     fn load_byte(bits: &FormatSicF3F4Bits, mut address: usize, machine: &mut Machine) -> u8 {
         if is_immediate(bits) {
+            if is_pc_relative(bits) {
+                address += machine.registers.get_pc() as usize;
+            }
+            if is_base_relative(bits) {
+                address += machine.registers.get_b() as usize;
+            }
             return (address & 0xFF) as u8;
         }
 
