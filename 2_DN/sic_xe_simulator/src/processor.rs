@@ -2,7 +2,8 @@ extern crate chrono;
 extern crate timer;
 
 use std::{
-    any::Any,
+    fs::OpenOptions,
+    io::{self, BufRead},
     sync::{Arc, Mutex},
 };
 
@@ -489,10 +490,12 @@ impl Processor {
 pub trait ProcessorExt {
     fn start(&self);
     fn stop(&self);
-    fn is_running(&self) -> bool;
+    fn step(&self);
 
     fn get_speed(&self) -> i64;
     fn set_speed(&self, hz: i64);
+
+    fn load_file(&self, file_name: &str);
 }
 
 impl ProcessorExt for ProcessorHandle {
@@ -513,8 +516,56 @@ impl ProcessorExt for ProcessorHandle {
         self_.guard = Some(guard);
     }
     fn stop(&self) -> () { self.lock().unwrap().guard = None; }
-    fn is_running(&self) -> bool { self.lock().unwrap().guard.is_some() }
+    fn step(&self) -> () {
+        let mut self_ = self.lock().unwrap();
+        self_.execute_instruction();
+    }
 
     fn get_speed(&self) -> i64 { self.lock().unwrap().speed }
     fn set_speed(&self, hz: i64) -> () { self.lock().unwrap().speed = hz.max(1).min(MAX_HZ); }
+
+    fn load_file(&self, file_name: &str) -> () {
+        let mut processor = self.lock().unwrap();
+
+        let file = OpenOptions::new()
+            .write(true)
+            .read(true)
+            .create(true)
+            .open(file_name)
+            .expect("Could not open file");
+
+        // load program at ./prog.obj
+        let mut current_load_address: usize;
+        let mut execution_address: i32 = 0;
+        for line in io::BufReader::new(file).lines() {
+            let line = line.unwrap();
+            match line.chars().nth(0).unwrap() {
+                'T' => {
+                    // set load address
+                    current_load_address =
+                        usize::from_str_radix(line.get(1..7).unwrap(), 16).unwrap();
+
+                    // write bytes into memory
+                    let number_of_bytes = i32::from_str_radix(line.get(7..9).unwrap(), 16).unwrap();
+                    for i in 0..number_of_bytes {
+                        let low_ix: usize = (9 + 2 * i) as usize;
+                        let high_ix: usize = (9 + 2 * i + 2) as usize;
+                        let val: u8 =
+                            u8::from_str_radix(line.get(low_ix..high_ix).unwrap(), 16).unwrap();
+
+                        processor.machine.memory.set_byte(current_load_address, val);
+                        current_load_address += 1;
+                    }
+                }
+                'E' => {
+                    // set execution address
+                    execution_address = i32::from_str_radix(line.get(1..7).unwrap(), 16).unwrap();
+                }
+                _ => {}
+            }
+        }
+
+        // execute program
+        processor.machine.registers.set_pc(execution_address);
+    }
 }
