@@ -1,7 +1,10 @@
 extern crate chrono;
 extern crate timer;
 
-use std::sync::{Arc, Mutex};
+use std::{
+    any::Any,
+    sync::{Arc, Mutex},
+};
 
 use crate::{
     machine::{opcodes::Opcode, Machine},
@@ -40,34 +43,47 @@ impl Processor {
                 return;
             }
         };
-        println!("\nbyte1={}", byte & 0xFC);
+        println!("\n{:?}", opcode);
+        // println!("\nbyte1={:08b}", byte);
 
         if self.exec_f1(&opcode) {
+            self.print_state();
             return;
         }
 
         let operand = self.fetch();
-        println!("byte2={}", operand);
+        // println!("byte2={:08b}", operand);
         if self.exec_f2(&opcode, &operand) {
+            self.print_state();
             return;
         }
 
         let third_byte = self.fetch();
-        println!("byte3={}", third_byte);
+        // println!("byte3={:08b}", third_byte);
         if !self.exec_sic_f3_f4(&opcode, &byte, &operand, &third_byte) {
             panic!("??? exec failed. Looks like I forgot to add a opcode to arms!?");
         }
+        self.print_state();
+    }
 
-        // TODO DEBUG: print memory
+    fn print_state(&self) -> () {
+        println!("STATE:\n-------------------------");
         for i in 0..100 {
             print!("{:0>2x} ", self.machine.memory.get_byte(i));
         }
+        println!("\na={}", self.machine.registers.get_a());
+        println!("b={}", self.machine.registers.get_b());
+        println!("x={}", self.machine.registers.get_x());
+        println!("s={}", self.machine.registers.get_s());
+        println!("t={}", self.machine.registers.get_t());
+        println!("sw={}", self.machine.registers.get_sw());
+        println!("-------------------------\n");
     }
 
     /// fetch next 8b and pc++
     fn fetch(&mut self) -> u8 {
         let pc = self.machine.registers.get_pc();
-        println!("pc={}", pc);
+        // println!("pc={}", pc);
         self.machine.registers.set_pc(pc + 1);
         self.machine.memory.get_byte(pc.try_into().unwrap())
     }
@@ -174,12 +190,13 @@ impl Processor {
                 ((second_byte & 0x0F) as u32) << 8 | *third_byte as u32
             } else if is_format_f4(&bits) {
                 let fourth_byte = self.fetch();
-                println!("byte4={}\n", fourth_byte);
+                // println!("byte4={:08b}\n", fourth_byte);
                 ((second_byte & 0x0F) as u32) << 16 | (*third_byte as u32) << 8 | fourth_byte as u32
             } else {
                 panic!("INVALID STATE");
             }
         } as usize;
+        println!("bits={}", bits);
 
         match opcode {
             // ***** immediate addressing not possible *****
@@ -286,6 +303,7 @@ impl Processor {
             Opcode::Lda => {
                 let word = Processor::load_word(&bits, addr, &mut self.machine);
                 self.machine.registers.set_a_as_bytes(word);
+                println!("a is now={}", self.machine.registers.get_a());
             }
             Opcode::Ldx => {
                 let word = Processor::load_word(&bits, addr, &mut self.machine);
@@ -422,8 +440,12 @@ impl Processor {
             return i24_to_u8arr(address as i32);
         }
 
+        println!("OG address={}", address);
         address = resolve_address(bits, address, machine);
-        machine.memory.get_word(address)
+        println!("resolved address={}", address);
+        let word = machine.memory.get_word(address);
+        println!("word={:2x},{:2x},{:2x}", word[0], word[1], word[2]);
+        word
     }
 
     fn load_byte(bits: &FormatSicF3F4Bits, mut address: usize, machine: &mut Machine) -> u8 {

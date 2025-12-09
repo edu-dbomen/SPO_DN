@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub enum Opcode {
     // ***** SIC format, SIC/XE Format 3 and 4
 
