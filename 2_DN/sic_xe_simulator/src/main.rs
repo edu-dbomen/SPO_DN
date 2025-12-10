@@ -166,8 +166,8 @@ impl App {
         let upper_chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([
-                Constraint::Percentage(40), // memory
-                Constraint::Percentage(60), // disasm
+                Constraint::Percentage(50), // memory
+                Constraint::Percentage(50), // disasm
             ])
             .split(top_chunks[0]);
 
@@ -211,7 +211,14 @@ impl App {
         frame.render_widget(mem_widget, upper_chunks[0]);
 
         // ===== DISASSEMBLY PANE =====
-        let disasm_lines = vec![Line::from("Nothing to dissasembly")];
+        let mut disasm_lines: Vec<Line> = Vec::new();
+        let mut addr = processor.machine.registers.get_pc() as usize;
+
+        for _ in 0..20 {
+            let (len, text) = processor.disassemble_at(addr);
+            disasm_lines.push(Line::from(text));
+            addr = addr.saturating_add(len);
+        }
 
         let disasm_block = Block::default()
             .borders(Borders::ALL)

@@ -484,6 +484,79 @@ impl Processor {
     fn invalid_opcode(invalid_opcode_byte: u8) -> () {
         panic!("{invalid_opcode_byte}: NOT VALID OPCODE!");
     }
+
+    // Dissasemble and return (len in bytes, instruction)
+    pub fn disassemble_at(&self, addr: usize) -> (usize, String) {
+        let mem = &self.machine.memory;
+
+        let b1 = mem.get_byte(addr);
+        let maybe_opcode = Opcode::from_byte(b1 & 0xFC);
+
+        // raw byte on non opcode
+        let opcode = match maybe_opcode {
+            None => {
+                let s = format!("{addr:06X}: {:02X}     ???", b1);
+                return (1, s);
+            }
+            Some(op) => op,
+        };
+
+        // Format 1
+        if matches!(
+            opcode,
+            Opcode::Float | Opcode::Fix | Opcode::Norm | Opcode::Sio | Opcode::Hio | Opcode::Tio
+        ) {
+            let mnemonic = format!("{:?}", opcode);
+            let s = format!("0x{addr:06X}: {:02X}      {mnemonic}", b1);
+            return (1, s);
+        }
+
+        // Format 2
+        let b2 = mem.get_byte(addr + 1);
+        if matches!(
+            opcode,
+            Opcode::Addr
+                | Opcode::Subr
+                | Opcode::Mulr
+                | Opcode::Divr
+                | Opcode::Compr
+                | Opcode::Shiftl
+                | Opcode::Shiftr
+                | Opcode::Rmo
+                | Opcode::Clear
+                | Opcode::Tixr
+                | Opcode::Svc
+        ) {
+            let mnemonic = format!("{:?}", opcode);
+            let s = format!("0x{addr:06X}: {:02X} {:02X}    {mnemonic}", b1, b2);
+            return (2, s);
+        }
+
+        // SIC / F3 / F4
+        let bits = get_format_sic_f3_f4_bits(&b1, &b2);
+        let len = if is_format_sic(&bits) {
+            3
+        } else if is_format_f3(&bits) {
+            3
+        } else if is_format_f4(&bits) {
+            4
+        } else {
+            panic!("Invalid state");
+        };
+
+        let mut bytes = Vec::with_capacity(len);
+        for i in 0..len {
+            bytes.push(mem.get_byte(addr + i));
+        }
+
+        let mnemonic = format!("{:?}", opcode);
+
+        let byte_str = bytes.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(" ");
+
+        let s = format!("0x{addr:06X}: {:<6} {mnemonic}", byte_str);
+
+        (len, s)
+    }
 }
 
 // ProcessorHandle
