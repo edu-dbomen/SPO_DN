@@ -267,6 +267,7 @@ impl App {
             Line::from("  start        start processor"),
             Line::from("  stop         stop processor"),
             Line::from("  step         one step"),
+            Line::from("  reset        resets simulator"),
             Line::from("  load <file>  load program"),
             Line::from("  f <hz>       set speed"),
             Line::from("  mem <addr>   show memory from addr"),
@@ -339,6 +340,9 @@ impl App {
             }
             ["stop"] => {
                 self.processor_ptr.stop();
+            }
+            ["reset"] => {
+                self.processor_ptr = Processor::new_handle();
             }
             ["load", file] => self.processor_ptr.load_file(file),
             ["f", hz] => {
