@@ -33,7 +33,7 @@ impl Machine {
     fn device_init() -> Vec<Box<dyn Device>> {
         let mut vec: Vec<Box<dyn Device>> = Vec::with_capacity(MAX_DEVICES);
         vec.push(Box::new(InputDevice {}));
-        vec.push(Box::new(OutputDevice {}));
+        vec.push(Box::new(OutputDevice { write_buffer: String::new() }));
         vec.push(Box::new(ErrDevice {}));
         for i in 3..MAX_DEVICES {
             let hex_string = format!("{:X}", i);
@@ -44,5 +44,14 @@ impl Machine {
     pub fn get_device(&mut self, index: usize) -> &mut Box<dyn Device> { &mut self.devices[index] }
     pub fn set_device(&mut self, index: usize, device: Box<dyn Device>) -> () {
         self.devices[index] = device;
+    }
+
+    pub fn output_text(&self) -> &str {
+        // device 1 is OutputDevice
+        &self.devices[1]
+            .as_any()
+            .downcast_ref::<OutputDevice>()
+            .expect("Device 1 is not OutputDevice")
+            .write_buffer
     }
 }

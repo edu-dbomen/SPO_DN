@@ -1,5 +1,6 @@
 use crate::machine::devices::device::Device;
 use std::{
+    any::Any,
     fs::{File, OpenOptions},
     io::{ErrorKind, Read, Write},
 };
@@ -28,6 +29,8 @@ impl FileDevice {
 }
 
 impl Device for FileDevice {
+    fn as_any(&self) -> &dyn Any { self }
+
     fn test(&self) -> bool { true }
 
     fn read(&mut self) -> u8 {

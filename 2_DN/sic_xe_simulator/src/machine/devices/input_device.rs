@@ -1,9 +1,14 @@
 use crate::machine::devices::device::Device;
-use std::io::{self, Read};
+use std::{
+    any::Any,
+    io::{self, Read},
+};
 
 pub struct InputDevice {}
 
 impl Device for InputDevice {
+    fn as_any(&self) -> &dyn Any { self }
+
     fn test(&self) -> bool { true }
 
     fn read(&mut self) -> u8 {

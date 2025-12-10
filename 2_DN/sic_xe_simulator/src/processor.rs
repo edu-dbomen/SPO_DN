@@ -36,6 +36,8 @@ impl Processor {
         Self { machine: Machine::new(), speed: 1000, timer: timer::Timer::new(), guard: None }
     }
 
+    pub fn get_speed(&self) -> i64 { self.speed }
+
     fn execute_instruction(&mut self) -> () {
         let byte = self.fetch();
         let opcode = match Opcode::from_byte(byte & 0xFC) {
