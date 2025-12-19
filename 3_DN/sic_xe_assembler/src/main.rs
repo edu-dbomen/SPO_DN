@@ -1,7 +1,9 @@
 use std::{env, fs::OpenOptions, io::BufReader, process::exit};
 
+mod mnemonics;
+
 mod lexer;
-// mod parser;
+mod parser;
 // mod symbol_resolver;
 // mod code_generator;
 
@@ -24,6 +26,7 @@ fn main() {
     let lexer_result = lexer::lexer(file_reader);
 
     // Lexer -> Parser
+    let parser_result = parser::parse(lexer_result);
 
     // Parser -> Symbol resolver
 
