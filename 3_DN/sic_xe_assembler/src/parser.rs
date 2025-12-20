@@ -1,6 +1,6 @@
 use crate::mnemonics::Mnemonic;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ParserResult {
     pub label: String,
     pub mnemonic: String,
@@ -9,7 +9,7 @@ pub struct ParserResult {
 }
 
 /// returns handled mnemonic
-pub fn parse_and_handle_extended(parser_result: &mut ParserResult, mnemonic: String) -> String {
+fn parse_and_handle_extended(parser_result: &mut ParserResult, mnemonic: String) -> String {
     if mnemonic.chars().nth(0).unwrap() == '+' {
         parser_result.extended = true;
         return mnemonic[1..].to_string();

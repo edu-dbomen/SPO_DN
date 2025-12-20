@@ -1,10 +1,12 @@
 use std::{env, fs::OpenOptions, io::BufReader, process::exit};
 
+use crate::symbol_resolver::SymbolResolver;
+
 mod mnemonics;
 
 mod lexer;
 mod parser;
-// mod symbol_resolver;
+mod symbol_resolver;
 // mod code_generator;
 
 fn main() {
@@ -29,6 +31,7 @@ fn main() {
     let parser_result = parser::parse(lexer_result);
 
     // Parser -> Symbol resolver
+    let symbol_resolver_result = SymbolResolver::new().resolve_symbols(parser_result);
 
     // Symbol resolver -> Code generator
 

@@ -16,6 +16,8 @@ impl Mnemonic {
     }
 }
 
+// ************************************************************************************************
+
 pub enum Opcode {
     // ***** SIC format, SIC/XE Format 3 and 4
 
@@ -188,11 +190,36 @@ impl FromStr for Opcode {
     }
 }
 
+pub enum Format {
+    F1,
+    F2,
+    F3_4, // SIC + SIC/XE format 3/4
+}
+impl Opcode {
+    pub fn format(self) -> Format {
+        use Format::*;
+        use Opcode::*;
+
+        match self {
+            // Format 1
+            Float | Fix | Norm | Sio | Hio | Tio => F1,
+
+            // Format 2
+            Addr | Subr | Mulr | Divr | Compr | Shiftl | Shiftr | Rmo | Svc | Clear | Tixr => F2,
+
+            // Everything else you listed is SIC / format 3/4
+            _ => F3_4,
+        }
+    }
+}
+
+// ************************************************************************************************
+
 pub enum Directive {
     Start,
     End,
     Org,
-    Equ,
+    Equ, // simple version, for constants only
     Base,
     Nobase,
     Resb,
