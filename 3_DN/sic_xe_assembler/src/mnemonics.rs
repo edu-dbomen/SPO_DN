@@ -196,7 +196,7 @@ pub enum Format {
     F3_4, // SIC + SIC/XE format 3/4
 }
 impl Opcode {
-    pub fn format(self) -> Format {
+    pub fn format(&self) -> Format {
         use Format::*;
         use Opcode::*;
 

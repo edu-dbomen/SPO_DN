@@ -18,7 +18,7 @@ rec     START 0
 
         +JSUB sinit
 
-recloop LDA #0x0a
+recloop LDA #10     . 0x0a
         WD #1
         CLEAR X
         CLEAR A
@@ -29,13 +29,13 @@ rdloop  RMO S, A    . S *= 10
         RMO A, S
 
         CLEAR A     . get digit
-        RD #0xFA
-        COMP #0x0a
+        RD #250     . 0xfa
+        COMP #10    . 0x0a
         JEQ reccont
-        COMP #0x00
+        COMP #0
         JEQ halt
 
-        SUB #0x30   . adtoi(digit): ascii digit to integer
+        SUB #48     . =0x30 adtoi(digit): ascii digit to integer
         ADDR A, S   . S += digit
         J rdloop
 
@@ -53,7 +53,7 @@ recout  RMO S, A
 
         JSUB mod
         TIX #0
-        ADD #0x30
+        ADD #48     . =0x30
         STCH output, X
 
         RMO S, A
