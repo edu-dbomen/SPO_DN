@@ -95,7 +95,14 @@ impl SymbolResolver {
                         self.locctr = token.operands[0].parse::<u32>().unwrap();
                         0
                     }
-                    Directive::Equ => 0,
+                    Directive::Equ => {
+                        let value: u32 = token.operands[0]
+                            .parse::<u32>()
+                            .expect("EQU only supports constants!");
+                        self.sym_tab.insert(token.label.clone(), value);
+
+                        0
+                    }
                     Directive::Base => 0,
                     Directive::Nobase => 0,
                     Directive::Resb => token.operands[0].parse::<u32>().unwrap(),
