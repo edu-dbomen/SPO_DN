@@ -23,6 +23,7 @@ pub struct SymbolResolver {
     sym_res: Vec<SymbolResolverTokenResult>,
     starting_location: u32,
     base_value: Option<u32>,
+    macro_expansion_counter: u32,
 }
 
 impl SymbolResolver {
@@ -33,6 +34,7 @@ impl SymbolResolver {
             sym_tab: HashMap::new(),
             sym_res: vec![],
             base_value: None,
+            macro_expansion_counter: 0,
         }
     }
 
@@ -102,7 +104,7 @@ impl SymbolResolver {
                     Directive::Word => 3,
                     Directive::If => {
                         let instruction_comp = ParserResult {
-                            label: "".to_string(),
+                            label: token.label.clone(),
                             mnemonic: "COMP".to_string(),
                             operands: vec![token.operands[0].clone()],
                             extended: false,
@@ -129,6 +131,149 @@ impl SymbolResolver {
                         });
 
                         self.locctr += 6;
+                        continue;
+                    }
+                    Directive::Mod => {
+                        let mod_res1 = format!("__mod_res1_c{}", self.macro_expansion_counter);
+                        self.sym_tab.insert(mod_res1.clone(), original_locctr + 21);
+                        let mod_res2 = format!("__mod_res2_c{}", self.macro_expansion_counter);
+                        self.sym_tab.insert(mod_res2.clone(), original_locctr + 24);
+                        let mod_end = format!("__mod_end_c{}", self.macro_expansion_counter);
+                        self.sym_tab.insert(mod_end.clone(), original_locctr + 27);
+
+                        let instruction_sta1 = ParserResult {
+                            label: token.label.clone(),
+                            mnemonic: "STA".to_string(),
+                            operands: vec![mod_res1.clone()],
+                            extended: false,
+                        };
+                        let instruction_div = ParserResult {
+                            label: "".to_string(),
+                            mnemonic: "DIV".to_string(),
+                            operands: vec![token.operands[0].clone()],
+                            extended: false,
+                        };
+                        let instruction_mul = ParserResult {
+                            label: "".to_string(),
+                            mnemonic: "MUL".to_string(),
+                            operands: vec![token.operands[0].clone()],
+                            extended: false,
+                        };
+                        let instruction_sta2 = ParserResult {
+                            label: "".to_string(),
+                            mnemonic: "STA".to_string(),
+                            operands: vec![mod_res2.clone()],
+                            extended: false,
+                        };
+                        let instruction_lda = ParserResult {
+                            label: "".to_string(),
+                            mnemonic: "LDA".to_string(),
+                            operands: vec![mod_res1.clone()],
+                            extended: false,
+                        };
+                        let instruction_sub = ParserResult {
+                            label: "".to_string(),
+                            mnemonic: "SUB".to_string(),
+                            operands: vec![mod_res2.clone()],
+                            extended: false,
+                        };
+                        let instruction_j = ParserResult {
+                            label: "".to_string(),
+                            mnemonic: "J".to_string(),
+                            operands: vec![mod_end.clone()],
+                            extended: false,
+                        };
+                        let instruction_resw1 = ParserResult {
+                            label: mod_res1.clone(),
+                            mnemonic: "RESW".to_string(),
+                            operands: vec!["1".to_string()],
+                            extended: false,
+                        };
+                        let instruction_resw2 = ParserResult {
+                            label: mod_res2.to_string(),
+                            mnemonic: "RESW".to_string(),
+                            operands: vec!["1".to_string()],
+                            extended: false,
+                        };
+                        let instruction_filler = ParserResult {
+                            label: mod_end.to_string(),
+                            mnemonic: "ADD".to_string(),
+                            operands: vec!["#0".to_string()],
+                            extended: false,
+                        };
+
+                        self.sym_res.push(SymbolResolverTokenResult {
+                            locctr: original_locctr,
+                            instruction: instruction_sta1,
+                            byte_code: 0,
+                            byte_code_size: 0,
+                        });
+
+                        self.sym_res.push(SymbolResolverTokenResult {
+                            locctr: original_locctr + 3,
+                            instruction: instruction_div,
+                            byte_code: 0,
+                            byte_code_size: 0,
+                        });
+
+                        self.sym_res.push(SymbolResolverTokenResult {
+                            locctr: original_locctr + 6,
+                            instruction: instruction_mul,
+                            byte_code: 0,
+                            byte_code_size: 0,
+                        });
+
+                        self.sym_res.push(SymbolResolverTokenResult {
+                            locctr: original_locctr + 9,
+                            instruction: instruction_sta2,
+                            byte_code: 0,
+                            byte_code_size: 0,
+                        });
+
+                        self.sym_res.push(SymbolResolverTokenResult {
+                            locctr: original_locctr + 12,
+                            instruction: instruction_lda,
+                            byte_code: 0,
+                            byte_code_size: 0,
+                        });
+
+                        self.sym_res.push(SymbolResolverTokenResult {
+                            locctr: original_locctr + 15,
+                            instruction: instruction_sub,
+                            byte_code: 0,
+                            byte_code_size: 0,
+                        });
+
+                        self.sym_res.push(SymbolResolverTokenResult {
+                            locctr: original_locctr + 18,
+                            instruction: instruction_j,
+                            byte_code: 0,
+                            byte_code_size: 0,
+                        });
+
+                        self.sym_res.push(SymbolResolverTokenResult {
+                            locctr: original_locctr + 21,
+                            instruction: instruction_resw1,
+                            byte_code: 0,
+                            byte_code_size: 0,
+                        });
+
+                        self.sym_res.push(SymbolResolverTokenResult {
+                            locctr: original_locctr + 24,
+                            instruction: instruction_resw2,
+                            byte_code: 0,
+                            byte_code_size: 0,
+                        });
+
+                        self.sym_res.push(SymbolResolverTokenResult {
+                            locctr: original_locctr + 27,
+                            instruction: instruction_filler,
+                            byte_code: 0,
+                            byte_code_size: 0,
+                        });
+
+                        self.macro_expansion_counter += 1;
+                        self.locctr += 30;
                         continue;
                     }
                 }
@@ -312,6 +457,7 @@ impl SymbolResolver {
                         res.byte_code_size = 24;
                     }
                     Directive::If => {}
+                    Directive::Mod => {}
                 }
             }
             // else

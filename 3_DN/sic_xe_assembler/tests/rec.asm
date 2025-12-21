@@ -53,7 +53,7 @@ recout  RMO S, A
         COMP #0
         JEQ recpr
 
-        JSUB mod
+        JSUB modul
         TIX #0
         ADD #48     . =0x30
         STCH output, X
@@ -80,12 +80,13 @@ output  RESB 100
 
 . (A % 10) = A - (A / 10) * 10
 . result in A
-mod     STA x
-        DIV #10
-        MUL #10
-        RMO A, B
-        LDA x
-        SUBR B, A
+. modul   STA x
+.         DIV #10
+.         MUL #10
+.         RMO A, B
+.         LDA x
+.         SUBR B, A
+modul   MOD #10
         RSUB
 
 quot    WORD 1
