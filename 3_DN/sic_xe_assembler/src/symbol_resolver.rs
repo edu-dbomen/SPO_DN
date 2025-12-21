@@ -81,6 +81,12 @@ impl SymbolResolver {
                         0
                     }
                     Directive::End => {
+                        self.sym_res.push(SymbolResolverTokenResult {
+                            locctr: original_locctr,
+                            instruction: token.clone(),
+                            byte_code: 0,
+                            byte_code_size: 0,
+                        });
                         break;
                     }
                     Directive::Org => {

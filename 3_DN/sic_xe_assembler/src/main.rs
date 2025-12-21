@@ -4,10 +4,10 @@ use crate::symbol_resolver::SymbolResolver;
 
 mod mnemonics;
 
+mod code_generator;
 mod lexer;
 mod parser;
 mod symbol_resolver;
-// mod code_generator;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -31,9 +31,8 @@ fn main() {
     let parser_result = parser::parse(lexer_result);
 
     // Parser -> Symbol resolver
-    let symbol_resolver_result = SymbolResolver::new().resolve_symbols(parser_result);
+    let mut symbol_resolver_result = SymbolResolver::new().resolve_symbols(parser_result);
 
     // Symbol resolver -> Code generator
-
-    // Code generator -> .obj code
+    code_generator::generate_code(file_name, &mut symbol_resolver_result);
 }
