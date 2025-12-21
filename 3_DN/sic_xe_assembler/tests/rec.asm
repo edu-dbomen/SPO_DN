@@ -30,10 +30,12 @@ rdloop  RMO S, A    . S *= 10
 
         CLEAR A     . get digit
         RD #250     . 0xfa
-        COMP #10    . 0x0a
-        JEQ reccont
-        COMP #0
-        JEQ halt
+        IF #10 reccont
+        . COMP #10    . 0x0a
+        . JEQ reccont
+        IF #0 halt
+        . COMP #0
+        . JEQ halt
 
         SUB #48     . =0x30 adtoi(digit): ascii digit to integer
         ADDR A, S   . S += digit

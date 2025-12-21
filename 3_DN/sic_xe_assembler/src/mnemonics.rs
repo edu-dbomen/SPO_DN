@@ -227,6 +227,7 @@ pub enum Directive {
     Resw,
     Byte,
     Word,
+    If,
 }
 impl FromStr for Directive {
     type Err = ();
@@ -245,6 +246,7 @@ impl FromStr for Directive {
             "RESW" => Ok(Resw),
             "BYTE" => Ok(Byte),
             "WORD" => Ok(Word),
+            "IF" => Ok(If),
 
             _ => Err(()),
         }

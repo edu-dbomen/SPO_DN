@@ -100,6 +100,37 @@ impl SymbolResolver {
                     Directive::Resw => token.operands[0].parse::<u32>().unwrap() * 3,
                     Directive::Byte => 1,
                     Directive::Word => 3,
+                    Directive::If => {
+                        let instruction_comp = ParserResult {
+                            label: "".to_string(),
+                            mnemonic: "COMP".to_string(),
+                            operands: vec![token.operands[0].clone()],
+                            extended: false,
+                        };
+                        let instruction_jeq = ParserResult {
+                            label: "".to_string(),
+                            mnemonic: "JEQ".to_string(),
+                            operands: vec![token.operands[1].clone()],
+                            extended: false,
+                        };
+
+                        self.sym_res.push(SymbolResolverTokenResult {
+                            locctr: original_locctr,
+                            instruction: instruction_comp,
+                            byte_code: 0,
+                            byte_code_size: 0,
+                        });
+
+                        self.sym_res.push(SymbolResolverTokenResult {
+                            locctr: original_locctr + 3,
+                            instruction: instruction_jeq,
+                            byte_code: 0,
+                            byte_code_size: 0,
+                        });
+
+                        self.locctr += 6;
+                        continue;
+                    }
                 }
             }
             // else
@@ -280,6 +311,7 @@ impl SymbolResolver {
 
                         res.byte_code_size = 24;
                     }
+                    Directive::If => {}
                 }
             }
             // else
